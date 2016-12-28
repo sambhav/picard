@@ -42,6 +42,9 @@ class CoverOptionsPage(OptionsPage):
         config.BoolOption("setting", "save_images_to_files", False),
         config.TextOption("setting", "cover_image_filename", "cover"),
         config.BoolOption("setting", "save_images_overwrite", False),
+        config.BoolOption("setting", "autofit_coverart", False),
+        config.IntOption("setting", "resize_width", 250),
+        config.IntOption("setting", "resize_height", 250),
         config.ListOption("setting", "ca_providers", [
             ('Cover Art Archive', True),
             ('Amazon', True),
@@ -57,6 +60,7 @@ class CoverOptionsPage(OptionsPage):
         self.ui.setupUi(self)
         self.ui.save_images_to_files.clicked.connect(self.update_filename)
         self.ui.save_images_to_tags.clicked.connect(self.update_save_images_to_tags)
+        self.ui.cb_autofit_coverart.clicked.connect(self.update_coverart_resize_option)
 
     def load_cover_art_providers(self):
         """Load available providers, initialize provider-specific options, restore state of each
@@ -83,6 +87,9 @@ class CoverOptionsPage(OptionsPage):
         self.ui.save_images_to_files.setChecked(config.setting["save_images_to_files"])
         self.ui.cover_image_filename.setText(config.setting["cover_image_filename"])
         self.ui.save_images_overwrite.setChecked(config.setting["save_images_overwrite"])
+        self.ui.cb_autofit_coverart.setChecked(config.setting["autofit_coverart"])
+        self.ui.resize_width.setValue(config.setting["resize_width"])
+        self.ui.resize_height.setValue(config.setting["resize_height"])
         self.load_cover_art_providers()
         self.update_all()
 
@@ -92,10 +99,14 @@ class CoverOptionsPage(OptionsPage):
         config.setting["save_images_to_files"] = self.ui.save_images_to_files.isChecked()
         config.setting["cover_image_filename"] = unicode(self.ui.cover_image_filename.text())
         config.setting["save_images_overwrite"] = self.ui.save_images_overwrite.isChecked()
+        config.setting["autofit_coverart"] = self.ui.cb_autofit_coverart.isChecked()
+        config.setting["resize_width"] = self.ui.resize_width.value()
+        config.setting["resize_height"] = self.ui.resize_height.value()
 
     def update_all(self):
         self.update_filename()
         self.update_save_images_to_tags()
+        self.update_coverart_resize_option()
 
     def update_filename(self):
         enabled = self.ui.save_images_to_files.isChecked()
@@ -105,5 +116,18 @@ class CoverOptionsPage(OptionsPage):
     def update_save_images_to_tags(self):
         enabled = self.ui.save_images_to_tags.isChecked()
         self.ui.cb_embed_front_only.setEnabled(enabled)
+
+    def update_coverart_resize_option(self):
+        enable_option = True
+        try:
+            import PIL
+        except ImportError:
+            enable_option = False
+            self.ui.cb_autofit_coverart.setToolTip(_("Autofit the images to given dimensions.\n\nPillow not found. Please install Pillow(Python) to enable this option."))
+        finally:
+            self.ui.cb_autofit_coverart.setEnabled(enable_option)
+            enable_resize = enable_option and self.ui.cb_autofit_coverart.isChecked()
+            self.ui.resize_width.setEnabled(enable_resize)
+            self.ui.resize_height.setEnabled(enable_resize)
 
 register_options_page(CoverOptionsPage)
