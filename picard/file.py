@@ -36,6 +36,7 @@ from picard.util import (
     decode_filename,
     encode_filename,
     format_time,
+    imageinfo,
     pathcmp,
     replace_win32_incompat,
     sanitize_filename,
@@ -170,6 +171,23 @@ class File(QtCore.QObject, Item):
     def _save_and_rename(self, old_filename, metadata):
         """Save the metadata."""
         new_filename = old_filename
+        if config.setting["autofit_coverart"]:
+            try:
+                from PIL import Image, ImageOps
+                import io
+            except ImportError:
+                log.debug("Pillow not found. Please make sure Pillow(Python) is installed to allow\nresizing and cropping coverart images.")
+            else:
+                for image in metadata.images:
+                    buff = io.BytesIO(image.data)
+                    im = Image.open(buff)
+                    resize_values = (config.setting['resize_width'], config.setting['resize_height'])
+                    im = ImageOps.fit(im, resize_values)
+                    store_buffer = io.BytesIO()
+                    image_type = imageinfo.identify(image.data)[2].split("/")[1]
+                    im.save(store_buffer, image_type)
+                    image.set_data(store_buffer.getvalue())
+                log.debug("Resized images.")
         if not config.setting["dont_write_tags"]:
             encoded_old_filename = encode_filename(old_filename)
             info = os.stat(encoded_old_filename)
