@@ -179,14 +179,16 @@ class File(QtCore.QObject, Item):
                 log.debug("Pillow not found. Please make sure Pillow(Python) is installed to allow\nresizing and cropping coverart images.")
             else:
                 for image in metadata.images:
-                    buff = io.BytesIO(image.data)
-                    im = Image.open(buff)
                     resize_values = (config.setting['resize_width'], config.setting['resize_height'])
-                    im = ImageOps.fit(im, resize_values)
-                    store_buffer = io.BytesIO()
-                    image_type = imageinfo.identify(image.data)[2].split("/")[1]
-                    im.save(store_buffer, image_type)
-                    image.set_data(store_buffer.getvalue())
+                    image_info = imageinfo.identify(image.data)
+                    if image_info[0] > resize_values[0] or image_info[1] > resize_values[1]:
+                        buff = io.BytesIO(image.data)
+                        im = Image.open(buff)
+                        im = ImageOps.fit(im, resize_values)
+                        image_type = image_info[2].split("/")[1]
+                        store_buffer = io.BytesIO()
+                        im.save(store_buffer, image_type)
+                        image.set_data(store_buffer.getvalue())
                 log.debug("Resized images.")
         if not config.setting["dont_write_tags"]:
             encoded_old_filename = encode_filename(old_filename)
